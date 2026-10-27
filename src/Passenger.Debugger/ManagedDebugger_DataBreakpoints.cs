@@ -451,7 +451,9 @@ public partial class ManagedDebugger
             return;
         }
         // Dr6 says which register the write hit; it is cleared, so no later trap of the thread is taken for this one.
-        DataTarget? target = DebugRegisters.Hit(written.Context).Select(slot => _dataSlots[slot]).FirstOrDefault(t => t is not null);
+        DataTarget? target = DebugRegisters.Hit(written.Context).Select(slot => _dataSlots[slot]).FirstOrDefault(t => t is not null)
+            // The runtime's context can come with Dr6 clear (seen on GitHub's Windows runners): the watch whose memory changed was written.
+            ?? _dataSlots.FirstOrDefault(t => t is not null && !ReadData(t).AsSpan().SequenceEqual(t.Last));
         ApplyDataRegisters(thread.Id);
         DataWatch? watch = target is null ? null : _dataWatches.FirstOrDefault(w => w.Target == target);
         if (target is null || watch is null)
